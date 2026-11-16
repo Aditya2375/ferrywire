@@ -1,0 +1,20 @@
+rules:
+  - id: no-dynamic-code
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: os.system(...)
+      - pattern: subprocess.$FUNC(...)
+    message: Wire data must never run code or a child process.
+    severity: ERROR
+    languages: [python]
+  - id: no-dns-resolution
+    pattern-either:
+      - pattern: socket.gethostbyname(...)
+      - pattern: socket.getaddrinfo(...)
+      - pattern: socket.create_connection(...)
+    message: Protocol adapter must use literal loopback only, without DNS/TCP.
+    severity: ERROR
+    languages: [python]

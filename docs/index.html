@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Ferrywire: a reliable-datagram protocol built from scratch. Explore loss, retries, duplicate suppression and the difference between delivery and confirmation."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Ferrywire - across the gap</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#lab">Skip to protocol lab</a>
+    <div class="page">
+      <header>
+        <a class="brand" href="#"
+          ><span class="brandmark" aria-hidden="true">≈</span>ferrywire</a
+        ><span class="header-note">RELIABLE DATAGRAMS / BUILT FROM SCRATCH</span
+        ><a class="source" href="https://github.com/Aditya2375/ferrywire"
+          >Source ↗</a
+        >
+      </header>
+      <main>
+        <section class="hero">
+          <div>
+            <p class="eyebrow">A LITTLE PROTOCOL FOR UNRELIABLE WATERS</p>
+            <h1>A packet can vanish.<br />The message needn't.</h1>
+            <p class="lede">
+              Send a chunk. Wait for its acknowledgment. Try again if the line
+              goes quiet. A small, inspectable protocol that makes the
+              uncertainty visible.
+            </p>
+            <div class="tags">
+              <span>Real UDP CLI</span><span>Stop-and-wait ARQ</span
+              ><span>Loopback only</span>
+            </div>
+          </div>
+          <div
+            class="route"
+            aria-label="A lost packet is sent again and acknowledged"
+          >
+            <div class="route-labels"><b>SENDER</b><b>RECEIVER</b></div>
+            <div class="journey lost">
+              <span>DATA 01</span><i></i><b>×</b><small>lost in transit</small>
+            </div>
+            <div class="journey">
+              <span>DATA 01</span><i></i><b>→</b
+              ><small>retry after timeout</small>
+            </div>
+            <div class="journey back">
+              <span>ACK 01</span><i></i><b>←</b
+              ><small>advance only on a matching ACK</small>
+            </div>
+            <p>
+              A missing reply is a reason to retry,<br />not a reason to assume
+              delivery.
+            </p>
+          </div>
+        </section>
+        <section class="lab-heading">
+          <div>
+            <p class="eyebrow">THE PACKET LAB</p>
+            <h2>Break the line.<br />Watch it recover.</h2>
+          </div>
+          <p>
+            This browser lab simulates virtual packets. It does not send UDP,
+            open sockets or contact another device. The Python CLI does use real
+            <code>127.0.0.1</code> UDP. Both implement the same frame format and
+            bounded state machines.
+          </p>
+        </section>
+        <section id="lab" class="lab" aria-label="Protocol lab">
+          <div class="controls panel">
+            <div class="panel-title">
+              <h3>01 / The experiment</h3>
+              <span>IN THIS TAB ONLY</span>
+            </div>
+            <div class="control-body">
+              <label for="message">Message to send</label
+              ><textarea
+                id="message"
+                spellcheck="false"
+                aria-describedby="message-note"
+              >
+Across the gap, one chunk at a time.
+An acknowledgment makes the next step possible.</textarea>
+              <div class="input-meta">
+                <span id="bytes">0 bytes</span><span>4 KiB text limit</span>
+              </div>
+              <p id="message-note" class="micro">
+                Invented sample text. No file import, upload or storage. Closing
+                the page loses the lab. Native endpoints accept arbitrary bytes
+                up to 16 KiB. Do not enter secrets.
+              </p>
+              <label for="scenario">What happens on the line?</label
+              ><select id="scenario">
+                <option value="clean">Clear crossing - no faults</option>
+                <option value="data-loss" selected>
+                  Lose the first DATA packet
+                </option>
+                <option value="ack-loss">
+                  Lose the first DATA acknowledgment
+                </option>
+                <option value="corruption">
+                  Corrupt the first DATA packet
+                </option>
+                <option value="duplicate">Duplicate a DATA packet</option>
+                <option value="reorder">
+                  Delay original DATA past its retry
+                </option>
+                <option value="final-ack">
+                  Lose the first final acknowledgment
+                </option>
+                <option value="blackhole">Drop every packet</option>
+                <option value="final-blackhole">
+                  Lose every final acknowledgment
+                </option>
+              </select>
+              <p id="scenario-note" class="scenario-note"></p>
+              <button id="run" class="primary">
+                Run the crossing <span aria-hidden="true">→</span></button
+              ><button id="reset" class="secondary">Reset sample</button>
+              <p class="micro">
+                Deterministic virtual time: 50 ms one way, 10 ms ticks. Initial
+                timeout 250 ms, doubling to 1 s, 6 attempts per frame. These are
+                loopback-lab settings, not an Internet congestion-control
+                design.
+              </p>
+            </div>
+          </div>
+          <div class="results panel">
+            <div class="panel-title">
+              <h3>02 / Two sides of the story</h3>
+              <span id="run-label">NOT RUN</span>
+            </div>
+            <div id="notice" class="notice" role="status" aria-live="polite">
+              Choose a fault and run the crossing.
+            </div>
+            <div class="endpoints">
+              <article id="sender-card">
+                <p class="eyebrow">SENDER</p>
+                <h4 id="sender-state">Waiting</h4>
+                <p id="sender-detail">No packets sent yet.</p>
+              </article>
+              <article id="receiver-card">
+                <p class="eyebrow">RECEIVER</p>
+                <h4 id="receiver-state">Waiting</h4>
+                <p id="receiver-detail">No message delivered yet.</p>
+              </article>
+            </div>
+            <div class="stats">
+              <div><b id="sent">-</b><span>frames sent</span></div>
+              <div><b id="retries">-</b><span>retransmissions</span></div>
+              <div><b id="elapsed">-</b><span>virtual ms</span></div>
+              <div>
+                <b id="duplicates">-</b><span>duplicates suppressed</span>
+              </div>
+            </div>
+            <div class="received">
+              <label for="received">Verified receiver message - read only</label
+              ><textarea
+                id="received"
+                readonly
+                spellcheck="false"
+                placeholder="Only appears after all chunks and the SHA-256 digest agree."
+              ></textarea>
+              <p class="micro">
+                Delivery means verified bytes in memory, not a saved file or
+                authenticated sender. If the final ACK never gets back, the
+                receiver may have the message while the sender reports failure.
+              </p>
+            </div>
+            <div class="progression">
+              <span>START + digest</span><i>→</i><span>DATA / ACK</span><i>→</i
+              ><span>FIN / ACK</span>
+            </div>
+          </div>
+        </section>
+        <section class="trace panel" aria-label="Packet trace">
+          <div class="panel-title">
+            <h3>03 / Packet-by-packet evidence</h3>
+            <span id="event-count">0 EVENTS</span>
+          </div>
+          <div class="trace-intro">
+            <p>
+              Read top to bottom. A duplicate ACK never triggers a new DATA
+              send. Retransmissions happen only when the sender's timer expires.
+              Old or out-of-order data cannot append bytes twice.
+            </p>
+            <button id="download" disabled>Download trace JSON</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">TIME</th>
+                  <th scope="col">ORIGIN / ACTOR</th>
+                  <th scope="col">FRAME</th>
+                  <th scope="col">EVENT</th>
+                </tr>
+              </thead>
+              <tbody id="trace-body">
+                <tr>
+                  <td colspan="4" class="empty">
+                    Run an experiment to see the trace.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="trace-foot">
+            The trace stops when the sender confirms or fails. The native
+            receiver has a fixed 2 s dally after delivery to answer repeated
+            final packets; it is not an always-on service.
+          </p>
+        </section>
+        <section class="format">
+          <div>
+            <p class="eyebrow">ON THE WIRE</p>
+            <h2>Thirty-one bytes<br />around a chunk.</h2>
+            <p>
+              27 bytes of header. Up to 512 bytes of payload. 4 bytes of CRC-32.
+              The START frame announces total size and a SHA-256 digest; a fresh
+              16-byte session ID separates transfers.
+            </p>
+          </div>
+          <div>
+            <div class="frame-grid">
+              <span>FRY1<small>magic + version / 4 B</small></span
+              ><span>KIND<small>1 B</small></span
+              ><span>SESSION<small>16 B</small></span
+              ><span>SEQ<small>2 B</small></span
+              ><span>TOTAL<small>2 B</small></span
+              ><span>LEN<small>2 B</small></span
+              ><span class="payload"
+                >PAYLOAD<small>0-512 B, by frame type</small></span
+              ><span>CRC-32<small>4 B</small></span>
+            </div>
+            <p class="micro">
+              Big-endian integers, strict lengths, counters and frame shapes.
+              CRC-32 and an announced SHA-256 digest detect accidental
+              corruption. Neither provides authentication or encryption; another
+              local process can interfere or forge packets.
+            </p>
+          </div>
+        </section>
+        <section class="boundaries">
+          <p class="eyebrow">SMALL ON PURPOSE</p>
+          <div class="boundary-grid">
+            <article>
+              <h3>Real, local endpoints</h3>
+              <p>
+                The Python standard-library CLI binds and sends only to IPv4
+                <code>127.0.0.1</code>. One transfer, at most 16 KiB. No DNS,
+                remote host option, network filenames or filesystem writes.
+              </p>
+            </article>
+            <article>
+              <h3>Bounded failure</h3>
+              <p>
+                One outstanding frame. Six attempts per frame, a 30 s sender
+                deadline and at most 4,096 incoming datagrams per endpoint. No
+                promise that arbitrary loss eventually recovers.
+              </p>
+            </article>
+            <article>
+              <h3>Know the edges</h3>
+              <p>
+                No encryption, authentication, restart recovery, multiplexing,
+                sliding window, RTT estimator or Internet congestion control.
+                Use a standard transport for real networks. This is a
+                trusted-local-machine protocol lab.
+              </p>
+            </article>
+          </div>
+        </section>
+        <section class="native">
+          <div>
+            <p class="eyebrow">OUTSIDE THE SIMULATION</p>
+            <h2>Run the real crossing.</h2>
+            <p>
+              Python 3.10+ on Linux. Start the receiver, use its reported port,
+              then send bytes from another terminal. The receiver prints ready
+              JSON first, then verified payload as base64 JSON. No files are
+              created.
+            </p>
+            <a href="https://github.com/Aditya2375/ferrywire#readme"
+              >Read the protocol and safety contract ↗</a
+            >
+          </div>
+          <pre><code># Terminal 1, from the source checkout
+python3 -m ferrywire receive --port 43127
+
+# Terminal 2, same source checkout
+printf 'hello\n' | \
+  python3 -m ferrywire send --port 43127
+
+# Sender confirmation is not disk persistence.
+# Ports may already be occupied: ready JSON says.</code></pre>
+        </section>
+      </main>
+      <footer>
+        <span>Ferrywire / across the gap.</span
+        ><span>Aditya Kulkarni · MIT OR Apache-2.0</span
+        ><a href="https://github.com/Aditya2375/ferrywire"
+          >Explore the source ↗</a
+        >
+      </footer>
+    </div>
+  </body>
+</html>
